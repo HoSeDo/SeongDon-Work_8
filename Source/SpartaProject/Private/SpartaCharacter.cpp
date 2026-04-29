@@ -1,5 +1,6 @@
 #include "SpartaCharacter.h"
 #include "SpartaPlayerController.h"
+#include "SpartaGameState.h"
 #include "EnhancedInputComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -28,7 +29,7 @@ ASpartaCharacter::ASpartaCharacter()
 
     // 초기 체력 설정
     MaxHealth = 100.0f;
-    Health = MaxHealth;
+    CurrentHealth = MaxHealth;
 }
 
 void ASpartaCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -155,41 +156,55 @@ void ASpartaCharacter::StopSprint(const FInputActionValue& value)
 
 float ASpartaCharacter::GetHealth() const
 {
-    return Health;
+    return CurrentHealth;
 }
 
-// 체력 회복 함수
 void ASpartaCharacter::AddHealth(float Amount)
 {
-    // 체력을 회복시킴. 최대 체력을 초과하지 않도록 제한함
-    Health = FMath::Clamp(Health + Amount, 0.0f, MaxHealth);
-    UE_LOG(LogTemp, Log, TEXT("Health increased to: %f"), Health);
+    CurrentHealth = FMath::Clamp(CurrentHealth + Amount, 0.0f, MaxHealth);
+
+    UE_LOG(LogTemp, Warning, TEXT("Healed! Current HP: %f"), CurrentHealth);
+
+    if (ASpartaGameState* GS = GetWorld()->GetGameState<ASpartaGameState>())
+    {
+        GS->UpdateHealth(CurrentHealth, MaxHealth);
+    }
 }
 
-// 데미지 처리 함수
 float ASpartaCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-    // 기본 데미지 처리 로직 호출 (필수는 아님)
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-    // 체력을 데미지만큼 감소시키고, 0 이하로 떨어지지 않도록 Clamp
-    Health = FMath::Clamp(Health - DamageAmount, 0.0f, MaxHealth);
-    UE_LOG(LogTemp, Warning, TEXT("Health decreased to: %f"), Health);
+    CurrentHealth = FMath::Clamp(CurrentHealth - DamageAmount, 0.0f, MaxHealth);
+    UE_LOG(LogTemp, Warning, TEXT("Health decreased to: %f"), CurrentHealth);
 
-    // 체력이 0 이하가 되면 사망 처리
-    if (Health <= 0.0f)
+    if (CurrentHealth <= 0.0f)
     {
         OnDeath();
     }
-
-    // 실제 적용된 데미지를 반환
     return ActualDamage;
 }
 
-// 사망 처리 함수
 void ASpartaCharacter::OnDeath()
 {
-    UE_LOG(LogTemp, Error, TEXT("Character is Dead!"));
+    UE_LOG(LogTemp, Error, TEXT("Character is Dead!")); 
+}
 
-    // 사망 후 로직
+void ASpartaCharacter::ApplyHealthChange(int32 Delta)
+{
+    CurrentHealth = FMath::Clamp(CurrentHealth + Delta, 0.0f, MaxHealth);
+
+    // 1. GameState 가져오기
+    if (ASpartaGameState* GS = GetWorld()->GetGameState<ASpartaGameState>())
+    {
+        // HUD 갱신 (기존 코드)
+        GS->UpdateHealth(CurrentHealth, MaxHealth);
+
+        // 2. 체력이 0인지 체크
+        if (CurrentHealth <= 0.0f)
+        {
+            // 게임 오버 함수 호출
+            GS->OnGameOver();
+        }
+    }
 }

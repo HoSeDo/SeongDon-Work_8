@@ -16,10 +16,12 @@ public:
 
 	UPROPERTY(VisibleAnyWhere, BlueprintReadWrite, Category = "Score")
 	int32 Score;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coin")
 	int32 SpawnedCoinCount;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coin")
 	int32 CollectedCoinCount;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
 	float LevelDuration;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
@@ -28,6 +30,11 @@ public:
 	int32 MaxLevels;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level")
 	TArray<FName> LevelMapNames;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
+	float CurrentHealth;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
+	float MaxHealth;
 
 	FTimerHandle LevelTimerHandle;
 	FTimerHandle HUDUpdateTimerHandle;
@@ -44,4 +51,8 @@ public:
 	void OnCoinCollected();
 	void EndLevel();
 	void UpdateHUD();
+	void UpdateHealth(float NewHealth, float NewMaxHealth);
+
+protected:
+	bool bIsGameOver = false;
 };
